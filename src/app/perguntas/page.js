@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { perguntas } from '../../database/perguntas';
+import {useRouter} from 'next/navigation';
 
 export default function PerguntasPage() {
+  const router = useRouter();
   const [perguntaAtualIndex, setPerguntaAtualIndex] = useState(0);
   const [tempoRestante, setTempoRestante] = useState(30);
   const [respondido, setRespondido] = useState(false);
@@ -17,13 +19,19 @@ export default function PerguntasPage() {
   const [respostaCorretaEmbaralhadaIndex, setRespostaCorretaEmbaralhadaIndex] = useState(null);
 
   const perguntaBoxRef = useRef(null);
-  const [perguntaBoxHeight, setPerguntaBoxHeight] = useState(0); // Estado para a altura da caixa de pergunta
+  const [perguntaBoxHeight, setPerguntaBoxHeight] = useState(0);
 
   const audioCronometroRef = useRef(null);
   const audioCertoRef = useRef(null);
   const audioErradoRef = useRef(null);
 
-  const perguntaOriginal = perguntas[perguntaAtualIndex];
+  const [isMobile, setIsMobile] = useState(false);
+  const [quantidadeRodadas, setQuantidadeRodadas] = useState(0);
+  // NOVO: Estado para armazenar as perguntas do jogo (limitadas pelo num de rodadas)
+  const [perguntasDoJogo, setPerguntasDoJogo] = useState([]);
+
+  // Pergunta atual baseada nas perguntas selecionadas para o jogo
+  const perguntaOriginal = perguntasDoJogo[perguntaAtualIndex];
 
   const shuffleArray = (array) => {
     let currentIndex = array.length, randomIndex;
@@ -35,6 +43,37 @@ export default function PerguntasPage() {
     }
     return array;
   };
+
+  // Carrega gameConfig do sessionStorage e seleciona as perguntas
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const storedGameConfig = sessionStorage.getItem('gameConfig');
+      let numRodadas = perguntas.length; // Valor padrão: todas as perguntas
+
+      if (storedGameConfig) {
+        try {
+          const gameConfig = JSON.parse(storedGameConfig);
+          if (gameConfig && typeof gameConfig.rodadas === 'number' && gameConfig.rodadas > 0) {
+            // Garante que o número de rodadas não excede o total de perguntas disponíveis
+            numRodadas = Math.min(gameConfig.rodadas, perguntas.length);
+          } else {
+            console.warn("gameConfig encontrado, mas 'rodadas' não é um número válido ou é zero. Usando todas as perguntas disponíveis.");
+          }
+        } catch (error) {
+          console.error("Erro ao fazer parse de 'gameConfig' do sessionStorage:", error);
+        }
+      } else {
+        console.warn("gameConfig não encontrado no sessionStorage. Usando todas as perguntas disponíveis.");
+      }
+
+      setQuantidadeRodadas(numRodadas);
+
+      // Seleciona e embaralha um subconjunto das perguntas originais
+      const perguntasEmbaralhadasCompletas = shuffleArray([...perguntas]);
+      const perguntasSelecionadasParaJogo = perguntasEmbaralhadasCompletas.slice(0, numRodadas);
+      setPerguntasDoJogo(perguntasSelecionadasParaJogo);
+    }
+  }, []); // Executa apenas uma vez ao montar o componente
 
   useEffect(() => {
     if (perguntaOriginal) {
@@ -55,7 +94,7 @@ export default function PerguntasPage() {
         setPerguntaBoxHeight(perguntaBoxRef.current.offsetHeight);
       });
     }
-  }, [perguntaOriginal, perguntaBoxHeight]); // Adicionado perguntaBoxHeight como dependência para re-executar se o valor mudar
+  }, [perguntaOriginal, perguntaBoxHeight]);
 
   const proximaPergunta = useCallback(() => {
     if (audioCronometroRef.current) {
@@ -70,14 +109,19 @@ export default function PerguntasPage() {
     setMostrarBotaoProxima(false);
     setAnimacaoPiscarClasse('');
 
-    if (perguntaAtualIndex < perguntas.length - 1) {
+    // AQUI: A condição de fim de jogo usa quantidadeRodadas (do sessionStorage)
+    if (perguntaAtualIndex < quantidadeRodadas - 1) {
       setPerguntaAtualIndex(prevIndex => prevIndex + 1);
       setTempoRestante(30);
     } else {
-      alert('Fim do jogo! Todas as perguntas foram respondidas.');
-      setPerguntaAtualIndex(0);
+      alert('Fim do jogo! Todas as ' + quantidadeRodadas + ' rodadas configuradas foram respondidas.');
+      // Opcional: Redirecionar para uma tela de resultados ou reiniciar
+      setPerguntaAtualIndex(0); // Reinicia para a primeira pergunta do conjunto atual
+      // Exemplo de redirecionamento:
+      // window.location.href = '/resultados';
+      router.push('/');
     }
-  }, [perguntaAtualIndex]);
+  }, [perguntaAtualIndex, quantidadeRodadas]);
 
   useEffect(() => {
     let timer;
@@ -140,42 +184,56 @@ export default function PerguntasPage() {
     }, 1000);
   };
 
-  // --- Estilos ---
+  // --- Lógica de responsividade ---
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // --- Estilos Responsivos ---
   const containerStyle = {
     display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
     height: '100vh',
     fontFamily: 'Arial, sans-serif',
     backgroundColor: '#1a202c',
     color: '#edf2f7',
-    padding: '20px',
+    padding: isMobile ? '10px' : '20px',
     boxSizing: 'border-box',
     position: 'relative',
-    overflow: 'hidden'
+    overflow: isMobile ? "scroll":"hidden"
   };
 
   const leftPanelStyle = {
-    flex: 0.7,
+    flex: isMobile ? '1' : '0.7',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-start',
     alignItems: 'center',
     position: 'relative',
-    background: 'linear-gradient(135deg, #1d3c7cff, #081b44ff)'
-
-    // padding: '20px',
+    background: 'linear-gradient(135deg, #1d3c7cff, #081b44ff)',
+    padding: isMobile ? '10px' : '20px',
   };
 
   const rightPanelStyle = {
-    flex: 0.3,
+    flex: isMobile ? 'unset' : '0.3',
+    height: isMobile ? '100px' : 'auto',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    fontSize: '5em',
+    fontSize: isMobile ? '3em' : '5em',
     fontWeight: 'bold',
     backgroundColor: '#4a5568',
     borderRadius: '8px',
-    marginLeft: '20px',
+    marginLeft: isMobile ? '0' : '20px',
+    marginTop: isMobile ? '10px' : '0',
+    width: isMobile ? '100%' : 'auto',
     zIndex: 1,
     padding: '20px',
   };
@@ -183,31 +241,29 @@ export default function PerguntasPage() {
   const perguntaBoxStyle = {
     background: 'linear-gradient(to bottom, #8B0000 0%, #FF4500 50%, #8B0000 100%)',
     color: 'white',
-    padding: '30px',
+    padding: isMobile ? '20px' : '30px',
     borderRadius: '15px',
     textAlign: 'center',
     boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
-    fontSize: '2.2em',
+    fontSize: isMobile ? '1.5em' : '2.2em',
     fontWeight: 'bold',
     textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
-    position: 'absolute',
-    // NOVO: Topo inicial fixo, ajustado para ser mais flexível com o logo
-    top: '90px', // Posição fixa inicial que permite o logo acima
-    // left: '20px',
-    width: 'calc(100% + 150px)',
+    position: isMobile ? 'relative' : 'absolute',
+    top: isMobile ? '0' : '90px',
+    left: isMobile ? '0' : '50%',
+    transform: isMobile ? 'translateX(0)' : 'translateX(-50%)',
+    width: isMobile ? '100%' : 'calc(100% + 150px)',
+    maxWidth: isMobile ? '100%' : 'auto',
     zIndex: 2,
   };
 
   const alternativasContainerStyle = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '15px',
-    width: '90%',
-    // maxWidth: '600px',
-    // NOVO: Margin top calculado dinamicamente
-    // 70px (aprox. altura do logo com margens) + perguntaBoxHeight + 60px (espaçamento extra)
-    marginTop: `${perguntaBoxHeight - 20}px`,
-    
+    gap: isMobile ? '10px' : '15px',
+    width: '100%',
+    marginTop: isMobile ? `${perguntaBoxHeight - 80}px` : `${perguntaBoxHeight - 20}px`,
+    marginBottom: isMobile ? '80px' : '0',
   };
 
   const fadeInStyle = {
@@ -238,17 +294,17 @@ export default function PerguntasPage() {
     return {
       background: bgColor,
       color: textColor,
-      padding: '15px 25px',
+      padding: isMobile ? '12px 18px' : '15px 25px',
       border: 'none',
       borderRadius: '8px',
-      fontSize: '1.2em',
+      fontSize: isMobile ? '1em' : '1.2em',
       cursor: (respondido || indexAtual >= alternativasVisiveis) ? 'default' : 'pointer',
       transition: 'background-color 0.3s ease, transform 0.1s ease',
       textAlign: 'left',
       display: 'flex',
       alignItems: 'center',
       textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
-      fontWeight:'bold',
+      fontWeight: 'bold',
       '&:hover': {
         transform: respondido ? 'none' : 'translateY(-2px)',
         backgroundColor: respondido ? bgColor : '#2b6cb0',
@@ -260,23 +316,22 @@ export default function PerguntasPage() {
     backgroundColor: '#e0f2f7',
     color: '#3182ce',
     borderRadius: '50%',
-    width: '40px',
-    height: '40px',
+    width: isMobile ? '30px' : '40px',
+    height: isMobile ? '30px' : '40px',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: '15px',
+    marginRight: isMobile ? '10px' : '15px',
     fontWeight: 'bold',
-    fontSize: '1.4em',
+    fontSize: isMobile ? '1.2em' : '1.4em',
     boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-       textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
-
+    textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
     flexShrink: 0,
   };
 
   const proximaPerguntaButtonStyle = {
-    padding: '15px 30px',
-    fontSize: '1.5em',
+    padding: isMobile ? '10px 20px' : '15px 30px',
+    fontSize: isMobile ? '1.2em' : '1.5em',
     backgroundColor: '#4CAF50',
     color: 'white',
     border: 'none',
@@ -284,19 +339,18 @@ export default function PerguntasPage() {
     cursor: 'pointer',
     boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
     transition: 'all 0.5s ease-out',
-    position: 'absolute',
-    bottom: mostrarBotaoProxima ? '50px' : '-100px',
+    position: 'fixed',
+    bottom: mostrarBotaoProxima ? (isMobile ? '20px' : '50px') : '-100px',
     left: '50%',
-    transform: mostrarBotaoProxima ? 'translateX(-50%)' : 'translateX(-50%) translateY(100px)',
+    transform: 'translateX(-50%)',
     opacity: mostrarBotaoProxima ? 1 : 0,
     zIndex: 10,
   };
 
   const logoStyle = {
-    width: '200px',
+    width: isMobile ? '150px' : '200px',
     height: 'auto',
-    // marginTop: '20px',
-    marginBottom: '20px',
+    marginBottom: isMobile ? '10px' : '20px',
     filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))',
     zIndex: 3,
   };
@@ -328,7 +382,7 @@ export default function PerguntasPage() {
       <audio ref={audioErradoRef} src="/assets/sounds/errado.mp3" preload="auto" />
 
       {/* Main content container para os painéis esquerdo e direito */}
-      <div style={{ display: 'flex', width: '100%', flex: 1 }}>
+      <div style={{ display: 'flex', width: '100%', flex: 1, flexDirection: isMobile ? 'column' : 'row' }}>
         <div style={leftPanelStyle}>
           {/* Logo como um item flex normal */}
           <img src="/assets/images/logo.png" alt="Logo do Jogo" style={logoStyle} />

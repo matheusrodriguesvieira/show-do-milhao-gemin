@@ -89,7 +89,7 @@ export default function Home() {
 
       {/* Contêiner dos Botões */}
       <div style={buttonsContainerStyle}>
-        <Link href={"/perguntas"} style={primaryButtonStyle}>
+        <Link href={"/configuracoes"} style={primaryButtonStyle}>
           Jogar
         </Link>
         <Link href={"/sobre"} style={secondaryButtonStyle}>
