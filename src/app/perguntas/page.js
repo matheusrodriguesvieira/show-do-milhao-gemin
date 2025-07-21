@@ -187,7 +187,7 @@ export default function PerguntasPage() {
   // --- Lógica de responsividade ---
   useEffect(() => {
     const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 800);
     };
 
     checkIsMobile();
