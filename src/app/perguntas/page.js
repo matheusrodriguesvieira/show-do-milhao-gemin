@@ -211,7 +211,7 @@ export default function perguntasPage() {
     alignItems: "center",
     height: isMobile ? "100%" : "35%",
     width: isMobile ? "79%" : "100%",
-    backgroundColor: "purple",
+    // backgroundColor: "purple",
   };
 
   const labelTitle = {
@@ -253,7 +253,7 @@ export default function perguntasPage() {
     flexDirection: "column",
     alignItems: "center",
     gap: "0.2rem",
-    backgroundColor: 'green',
+    // backgroundColor: 'green',
     width: '100%'
   };
   // Carrega gameConfig do sessionStorage e seleciona as perguntas
