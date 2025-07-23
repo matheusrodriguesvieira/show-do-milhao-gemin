@@ -206,18 +206,19 @@ export default function perguntasPage() {
     display: "flex",
     flexDirection: isMobile ? "row" : "column",
     justifyContent: 'center',
-    gap: '8%',
+    gap: '5%',
     // justifyContent: isMobile ? "center" : "space-between",
     alignItems: "center",
     height: isMobile ? "100%" : "35%",
     width: isMobile ? "79%" : "100%",
-    // backgroundColor: "purple",
+    backgroundColor: "purple",
   };
 
   const labelTitle = {
     fontSize: isMobile ? "0.6rem  " : "0.9rem",
     textTransform: "uppercase",
     // fontWeight: 'bold'
+    // backgroundColor: 'red'
   };
 
   const labelSubtitle = {
@@ -252,7 +253,8 @@ export default function perguntasPage() {
     flexDirection: "column",
     alignItems: "center",
     gap: "0.2rem",
-    // backgroundColor: 'green'
+    backgroundColor: 'green',
+    width: '100%'
   };
   // Carrega gameConfig do sessionStorage e seleciona as perguntas
   useEffect(() => {
@@ -541,7 +543,7 @@ export default function perguntasPage() {
             <label style={labelSubtitle}>{jogadorNome}</label>
           </div>
           <div style={pontuacaoLabelContainer}>
-            <label style={labelTitle}>Pontuação Total</label>
+            <label style={labelTitle}>Pontuação</label>
             <label
               style={{
                 ...labelSubtitle,
@@ -568,7 +570,7 @@ export default function perguntasPage() {
               height={isMobile ? 20 : 30} // Altura da barra responsiva
               borderRadius={isMobile ? 10 : 15} // Borda da barra responsiva
             />
-            <div style={{...labelSubtitle, fontSize: isMobile ? '0.8rem': '2rem',}}>{tempoRestante} segundos</div>
+            <div style={{...labelSubtitle, fontSize: isMobile ? '0.7rem': '2rem',}}>{tempoRestante} segundos</div>
           </div>
         </div>
       </div>
